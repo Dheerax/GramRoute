@@ -2,9 +2,81 @@ import { useState } from "react";
 
 function Report() {
   const [file, setFile] = useState(null);
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState(null);
   const [category, setCategory] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if(!title.trim()){
+      newErrors.title = "Title is required";
+    }
+
+    if(!category) {
+      newErrors.category = "Please select a category";
+    }
+
+    if(!description.trim()){
+      newErrors.description = "Description is required";
+    }
+
+    if(!file){
+      newErrors.file = "Please upload a image or video";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    setErrors({});
+
+    if(!validateForm()) {
+      alert("PLease Fill Stuff!");
+      return;
+    }
+    setIsSubmitting(true);
+
+    try{
+      const reportData = {
+        title: title.trim(),
+        description: description.trim(),
+        category: category,
+        location: location,
+        fileName: file ? file.name : null
+      };
+      const response = await fetch('http://localhost:5000/api/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reportData)
+      });
+
+      const result = await response.json();
+      if(response.ok && result.success){
+        alert("Report submitted successfully! 🥳");
+        setTitle("");
+        setDescription("");
+        setCategory("");
+        setFile(null);
+        setLocation(null);
+        setErrors({});
+      }
+      else{
+        throw new Error(result.message || "Failed to submit the form!");
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+      alert("Failed to submit the report! Please check your internet connection");
+    } finally {
+      setIsSubmitting(false);
+    }
+   };
 
   return (
     <div className="p-4 min-w-md mx-auto">
@@ -14,7 +86,7 @@ function Report() {
       <div className="mb-4 max-w-4xl w-ful h-full rounded-md mx-auto space-y-2">
         <div className="mb-1 p-2">
           <label className="font-medium text-gray-600 text-left">Enter Title</label>
-          <input type="text" className="rounded-md mb-2 w-full p-1.5"/>
+          <input type="text" className="rounded-md mb-2 w-full p-1.5"  value={title} onChange={e => setTitle(e.target.value)}/>
         </div>
         <div className="mb-1 p-2">
           <label className="font-medium text-gray-600 text-left">Category</label>
@@ -60,7 +132,10 @@ function Report() {
           </label>
         </div>
         <div className="mb-2 p-1 w-full flex items-center justify-center">
-          <button className="bg-green-500 p-2 rounded-md px-10 hover:bg-green-600">Submit</button>
+          <button className= {`bg-green-500 p-2 rounded-md px-10 hover:bg-green-600 ${isSubmitting 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-green-500 hover:bg-green-600'
+            }`} onClick={handleSubmit} disabled={isSubmitting} >Submit</button>
         </div>
       </div>
     </div>

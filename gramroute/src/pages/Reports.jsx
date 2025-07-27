@@ -1,64 +1,70 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function Reports() {
-  const [reports, setReports] = useState([
-    {
-      id: 1,
-      title: "Pothole on Main Street",
-      description:
-        "Large pothole causing traffic issues and potential vehicle damage. Located near the intersection with Oak Avenue.",
-      status: "pending",
-      date: "2025-07-20",
-      location: { lat: 40.7128, lng: -74.006 },
-      image: "",
-      reporter: "John Doe",
-      category: "Road Infrastructure",
-    },
-    {
-      id: 2,
-      title: "Broken Street Light",
-      description:
-        "Street light has been out for 3 days, making the area unsafe for pedestrians at night.",
-      status: "in-progress",
-      date: "2025-07-19",
-      location: { lat: 40.7589, lng: -73.9851 },
-      image: "https://via.placeholder.com/400x300?text=Street+Light",
-      reporter: "Jane Smith",
-      category: "Public Safety",
-    },
-    {
-      id: 3,
-      title: "Garbage Dump on Roadside",
-      description:
-        "Illegal dumping of construction waste blocking part of the sidewalk and creating health hazards.",
-      status: "resolved",
-      date: "2025-07-18",
-      location: { lat: 40.7505, lng: -73.9934 },
-      image: "https://via.placeholder.com/400x300?text=Garbage+Dump",
-      reporter: "Mike Johnson",
-      category: "Waste Management",
-    },
-    {
-      id: 4,
-      title: "Water Leak",
-      description:
-        "Water main leak causing flooding on the street and potential water damage to nearby properties.",
-      status: "pending",
-      date: "2025-07-17",
-      location: { lat: 40.7282, lng: -74.0776 },
-      image: "https://via.placeholder.com/400x300?text=Water+Leak",
-      reporter: "Sarah Wilson",
-      category: "Utilities",
-    },
-  ]);
-
+  const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("http://localhost:5000/api/reports");
+      const data = await response.json();
+
+      if (response.ok) {
+        setReports(data.reports);
+        setError(null);
+      } else {
+        setError("Failed to Load reports");
+      }
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      setError("Failed to connect to server");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h screen bg-gray-100 p-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-800 mb--4">
+            Loading Reports...
+          </h1>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 p-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-red-600 mb-4">Error</h1>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={fetchReports}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const filteredReports =
     filterStatus === "all"
       ? reports
-      : reports.filter((report) => report.status === filterStatus)
+      : reports.filter((report) => report.status === filterStatus);
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -66,8 +72,8 @@ function Reports() {
       "in-progress": "bg-blue-100 text-blue-800",
       resolved: "bg-green-100 text-green-800",
     };
-    return styles[status] || "bg-gray-100 text-gray-800"
-  }
+    return styles[status] || "bg-gray-100 text-gray-800";
+  };
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="mb-8">
@@ -126,11 +132,24 @@ function Reports() {
             onClick={() => setSelectedReport(report)}
             className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
           >
-            <img
-              src={report.image}
-              alt={report.title}
-              className="w-full h-48 object-cover"
-            />
+            <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+              {report.file_name ? (
+                <img
+                  src={`/uploads/${report.file_name}`}
+                  alt={report.title}
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    e.target.src =
+                      "https://via.placeholder.com/400x300/gray/white?text=No+Image+Available";
+                  }}
+                />
+              ) : (
+                <div className="text-gray-500 text-center">
+                  <span className="text-4xl">📷</span>
+                  <p>No Image</p>
+                </div>
+              )}
+            </div>
             <div className="p-4">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-lg font-semibold text-gray-800 line-clamp-2">
@@ -148,14 +167,19 @@ function Reports() {
                 {report.description}
               </p>
               <div className="flex justify-between items-center text-xs text-gray-500">
-                <span>{report.category}</span>
-                <span>{report.date}</span>
+                <span className="capitalize">{report.category}</span>
+                <span>
+                  {/* Fix this date too */}
+                  {report.created_at
+                    ? new Date(report.created_at).toLocaleDateString()
+                    : report.date || "No date"}
+                </span>
               </div>
             </div>
           </div>
         ))}
 
-				{/* Pop Up report */}
+        {/* Pop Up report */}
         {selectedReport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -171,11 +195,24 @@ function Reports() {
                 </button>
               </div>
               <div className="p-6">
-                <img
-                  src={selectedReport.image}
-                  alt={selectedReport.title}
-                  className="w-full h-64 object-cover rounded-lg mb-4"
-                />
+                <div className="w-full h-64 bg-gray-200 rounded-lg mb-4 flex items-center justify-center">
+                  {selectedReport.file_name ? (
+                    <img
+                      src={`/uploads/${selectedReport.file_name}`}
+                      alt={selectedReport.title}
+                      className="w-full h-64 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.target.src =
+                          "https://via.placeholder.com/600x400/gray/white?text=Image+Not+Available";
+                      }}
+                    />
+                  ) : (
+                    <div className="text-gray-500 text-center">
+                      <span className="text-6xl">📷</span>
+                      <p className="mt-2">No Image Available</p>
+                    </div>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
@@ -211,7 +248,12 @@ function Reports() {
                       Date:
                     </span>
                     <span className="ml-2 text-sm text-gray-700">
-                      {selectedReport.date}
+                      {/* Fix the date display */}
+                      {selectedReport.created_at
+                        ? new Date(
+                            selectedReport.created_at
+                          ).toLocaleDateString()
+                        : selectedReport.date || "No date"}
                     </span>
                   </div>
                 </div>
@@ -229,8 +271,7 @@ function Reports() {
                     Location
                   </h3>
                   <p className="text-gray-600">
-                    Latitude: {selectedReport.location.lat},{" "}
-                    {selectedReport.location.lng}
+                    {selectedReport.location || "Location not specified"}
                   </p>
                 </div>
 
