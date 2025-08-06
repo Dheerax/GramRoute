@@ -1,13 +1,25 @@
 import { useState } from "react";
+import { useAuth } from './AuthContext';
 
 function Report() {
-  const [file, setFile] = useState(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState(null);
-  const [category, setCategory] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState({});
+  const { user, authenticatedFetch, isAuthenticated } = useAuth();
+  
+    const [file, setFile] = useState(null);
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [location, setLocation] = useState(null);
+    const [category, setCategory] = useState("")
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errors, setErrors] = useState({});
+
+  if (!isAuthenticated) {
+    return(
+      <div className="p-4 text-center">
+        <h2 className="text-xl text-red-600">Please Login to submit</h2>
+        <button onClick={() => window.location.href = '/Login'} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">Go to login</button>
+      </div>
+    )
+  }
 
   const validateForm = () => {
     const newErrors = {};
@@ -46,14 +58,11 @@ function Report() {
         title: title.trim(),
         description: description.trim(),
         category: category,
-        location: location,
-        fileName: file ? file.name : null
+        latitude: null,
+        longitude: null 
       };
-      const response = await fetch('http://localhost:5000/api/reports', {
+      const response = await authenticatedFetch('http://localhost:5000/api/reports', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(reportData)
       });
 
@@ -83,7 +92,10 @@ function Report() {
       <h1 className="text-2xl text-center text-black font-bold font-mono mb-4">
         Report an Issue!
       </h1>
-      <div className="mb-4 max-w-4xl w-ful h-full rounded-md mx-auto space-y-2">
+      <div className="text-center mb-4 text-gray-600">
+        Submitting as: <strong>{user?.username}</strong>
+      </div>
+      <div className="mb-4 max-w-4xl w-full h-full rounded-md mx-auto space-y-2">
         <div className="mb-1 p-2">
           <label className="font-medium text-gray-600 text-left">Enter Title</label>
           <input type="text" className="rounded-md mb-2 w-full p-1.5"  value={title} onChange={e => setTitle(e.target.value)}/>

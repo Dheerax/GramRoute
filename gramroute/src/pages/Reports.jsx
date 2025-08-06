@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useAuth } from './AuthContext'
+
 
 function Reports() {
   const [reports, setReports] = useState([]);
@@ -7,6 +9,7 @@ function Reports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const {authenticatedFetch} = useAuth();
   useEffect(() => {
     fetchReports();
   }, []);
@@ -14,7 +17,7 @@ function Reports() {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:5000/api/reports");
+      const response = await authenticatedFetch("http://localhost:5000/api/reports");
       const data = await response.json();
 
       if (response.ok) {
@@ -127,10 +130,10 @@ function Reports() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredReports.map((report) => (
-          <div
+          <button
             key={report.id}
             onClick={() => setSelectedReport(report)}
-            className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200 w-full text-left"
           >
             <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
               {report.file_name ? (
@@ -176,7 +179,7 @@ function Reports() {
                 </span>
               </div>
             </div>
-          </div>
+          </button>
         ))}
 
         {/* Pop Up report */}
