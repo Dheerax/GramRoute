@@ -1,32 +1,119 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './pages/AuthContext';
+import Navbar from './components/Navbar';
+import Homepage from './pages/Homepage';
 import Dashboard from './pages/Dashboard';
-import Navbar from './pages/Navbar';
-import Report from './pages/Report'
-import Login from './pages/Login'
-import Reports from './pages/Reports'
-import Homepage from './pages/Homepage'
-import Profile from './pages/Profile'
-import { BrowserRouter as Router, Routes, Route} from 'react-router-dom';
-import { AuthProvider } from './pages/AuthContext';
+import Login from './pages/Login';
+import Report from './pages/Report';
+import Reports from './pages/Reports';
+import Profile from './pages/Profile';
 
+// ✅ Protected Route Component
+function ProtectedRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+}
+
+// ✅ Public Route Component (redirect if already logged in)
+function PublicRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return children;
+}
+
+// ✅ App Routes Component (INSIDE AuthProvider)
+function AppRoutes() {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <Router>
+      {/* ✅ Show Navbar to everyone */}
+      <Navbar />
+      
+      <Routes>
+        {/* ✅ Public routes - redirect to dashboard if logged in */}
+        <Route 
+          path="/login" 
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } 
+        />
+        
+        {/* ✅ Homepage accessible to everyone */}
+        <Route 
+          path="/" 
+          element={<Homepage />} 
+        />
+
+        {/* ✅ Protected routes - require login */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/report" 
+          element={
+            <ProtectedRoute>
+              <Report />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/reports" 
+          element={
+            <ProtectedRoute>
+              <Reports />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/profile" 
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* ✅ Catch all - redirect based on auth status */}
+        <Route 
+          path="*" 
+          element={
+            isAuthenticated ? 
+              <Navigate to="/dashboard" replace /> : 
+              <Navigate to="/" replace />
+          } 
+        />
+      </Routes>
+    </Router>
+  );
+}
+
+// ✅ Main App Component (AuthProvider wrapper)
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-100">
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<Homepage />} />
-            <Route path="/homepage" element={<Homepage />} /> 
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/report" element={<Report />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/profile" element={<Profile />} />
-          </Routes>
-        </div>
-      </Router>
+      <AppRoutes />
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;
