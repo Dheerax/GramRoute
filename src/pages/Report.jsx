@@ -20,7 +20,10 @@ import {
   Image as ImageIcon,
   User,
   Globe,
-  Loader
+  Loader,
+  MapPin,
+  Navigation,
+  RefreshCw
 } from 'lucide-react';
 
 function Report() {
@@ -32,6 +35,8 @@ function Report() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [locationError, setLocationError] = useState("");
   const [category, setCategory] = useState("");
   const [priority, setPriority] = useState("medium");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,6 +78,59 @@ function Report() {
     }));
     setParticles(newParticles);
   }, []);
+
+  // Location functions
+  const fetchCurrentLocation = () => {
+    setIsLoadingLocation(true);
+    setLocationError("");
+
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by this browser");
+      setIsLoadingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocation({
+          latitude: latitude,
+          longitude: longitude,
+          accuracy: position.coords.accuracy
+        });
+        setIsLoadingLocation(false);
+      },
+      (error) => {
+        // let errorMessage = "Unable to retrieve location";
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Location access denied by user";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information is unavailable";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out";
+            break;
+          // default:
+          //   errorMessage = "An unknown error occurred";
+          //   break;
+        }
+        setLocationError(errorMessage);
+        setIsLoadingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000
+      }
+    );
+  };
+
+  const clearLocation = () => {
+    setLocation(null);
+    setLocationError("");
+  };
 
   const categories = [
     { value: "road", label: "Road Infrastructure", icon: "🛣️", color: "from-blue-500 to-cyan-500" },
@@ -247,6 +305,7 @@ function Report() {
           setFile(null);
           setFilePreview(null);
           setLocation(null);
+          setLocationError("");
           setErrors({});
           setCurrentStep(1);
           setSuccess(false);
@@ -263,7 +322,7 @@ function Report() {
   };
 
   const getStepProgress = () => {
-    const totalSteps = 4;
+    const totalSteps = 5;
     return (currentStep / totalSteps) * 100;
   };
 
@@ -563,6 +622,108 @@ function Report() {
                 </div>
               </motion.div>
 
+              {/* Location Section */}
+              <motion.div whileHover={{ scale: 1.01 }}>
+                <label className="flex items-center space-x-2 text-lg font-semibold text-gray-800 mb-3">
+                  <MapPin className="w-5 h-5 text-red-600" />
+                  <span>Location (Optional)</span>
+                </label>
+                
+                <div className="space-y-4">
+                  {!location ? (
+                    <motion.button
+                      type="button"
+                      onClick={fetchCurrentLocation}
+                      disabled={isLoadingLocation}
+                      className={`w-full p-6 border-2 border-dashed rounded-2xl transition-all duration-300 ${
+                        isLoadingLocation 
+                          ? 'border-blue-300 bg-blue-50 cursor-not-allowed'
+                          : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                      }`}
+                      whileHover={!isLoadingLocation ? { scale: 1.02 } : {}}
+                      whileTap={!isLoadingLocation ? { scale: 0.98 } : {}}
+                    >
+                      <div className="text-center">
+                        {isLoadingLocation ? (
+                          <>
+                            <Loader className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-3" />
+                            <p className="text-blue-600 font-medium">Getting your location...</p>
+                            <p className="text-sm text-gray-500 mt-2">Please allow location access</p>
+                          </>
+                        ) : (
+                          <>
+                            <Navigation className="w-8 h-8 text-gray-600 mx-auto mb-3" />
+                            <p className="text-gray-900 font-medium mb-2">Add Current Location</p>
+                            <p className="text-sm text-gray-500">
+                              Click to automatically detect your location and add GPS coordinates to your report
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </motion.button>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-green-50 border-2 border-green-200 rounded-2xl p-6"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                            <MapPin className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-green-900 mb-1">Location Added Successfully</h4>
+                            <div className="text-sm text-green-700 space-y-1">
+                              <p>Latitude: {location.latitude.toFixed(6)}</p>
+                              <p>Longitude: {location.longitude.toFixed(6)}</p>
+                              <p>Accuracy: ±{Math.round(location.accuracy)}m</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <motion.button
+                            type="button"
+                            onClick={fetchCurrentLocation}
+                            disabled={isLoadingLocation}
+                            className="p-2 text-green-600 hover:text-green-700 transition-colors"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            title="Refresh location"
+                          >
+                            <RefreshCw className={`w-4 h-4 ${isLoadingLocation ? 'animate-spin' : ''}`} />
+                          </motion.button>
+                          <motion.button
+                            type="button"
+                            onClick={clearLocation}
+                            className="p-2 text-red-600 hover:text-red-700 transition-colors"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            title="Remove location"
+                          >
+                            <X className="w-4 h-4" />
+                          </motion.button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* {locationError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-red-50 border border-red-200 rounded-xl p-4"
+                    >
+                      <div className="flex items-center space-x-2 text-red-700">
+                        <AlertTriangle className="w-5 h-5" />
+                        <span className="font-medium">Location Error</span>
+                      </div>
+                      <p className="text-sm text-red-600 mt-1">{locationError}</p>
+                    </motion.div>
+                  )} */}
+                </div>
+              </motion.div>
+
               {/* Description Field */}
               <motion.div whileHover={{ scale: 1.01 }}>
                 <label className="flex items-center space-x-2 text-lg font-semibold text-gray-800 mb-3">
@@ -575,7 +736,7 @@ function Report() {
                   onChange={(e) => {
                     setDescription(e.target.value);
                     if (errors.description) setErrors({ ...errors, description: '' });
-                    setCurrentStep(Math.max(currentStep, 3));
+                    setCurrentStep(Math.max(currentStep, 4));
                   }}
                   onFocus={() => setFocusedField('description')}
                   onBlur={() => setFocusedField(null)}
@@ -626,7 +787,7 @@ function Report() {
                     accept="image/*,video/*"
                     onChange={(e) => {
                       handleFileChange(e.target.files[0]);
-                      setCurrentStep(Math.max(currentStep, 4));
+                      setCurrentStep(Math.max(currentStep, 5));
                     }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer pointer-events-none"
                   />
